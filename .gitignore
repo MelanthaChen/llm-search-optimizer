@@ -1,0 +1,10 @@
+node_modules/
+.env
+backend/.env
+frontend/.env
+logs/
+backend/logs/
+backend/data/promotions/
+dist/
+.vite/
+.DS_Store

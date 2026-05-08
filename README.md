@@ -543,5 +543,3 @@ Inspired by research discussions on:
 * search optimization
 * repeated exposure effects
 
-```
-```

@@ -1,4 +1,5 @@
 const { callModel } = require("./model.service");
+const preparedSessions = new Map();
 
 const {
   prepareExposureChat,
@@ -248,6 +249,8 @@ async function runExposureOnly(body) {
       target: runState.target,
 
       question: runState.chatAPrompt,
+
+      sessionId,
     });
 
     runState.exposureConversation = result.exposureConversation;
@@ -452,10 +455,31 @@ async function finishExperiment(body) {
   };
 }
 
+/**
+ * Update live exposure progress.
+ */
+function updateExposureProgress(sessionId, completed, total) {
+  const session = preparedSessions.get(sessionId);
+
+  if (!session) return;
+
+  session.progress = {
+    completed,
+    total,
+    percentage: total > 0 ? ((completed / total) * 100).toFixed(1) : 0,
+  };
+
+  preparedSessions.set(sessionId, session);
+}
+
 module.exports = {
   prepareExperiment,
 
   runExposureOnly,
 
   finishExperiment,
+
+  preparedSessions,
+
+  updateExposureProgress,
 };

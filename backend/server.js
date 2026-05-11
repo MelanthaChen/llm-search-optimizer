@@ -6,6 +6,7 @@ const {
   prepareExperiment,
   runExposureOnly,
   finishExperiment,
+  preparedSessions,
 } = require("./services/experiment.service");
 
 const app = express();
@@ -41,6 +42,27 @@ app.post("/finish-experiment", async (req, res) => {
     console.error(err);
     res.status(err.statusCode || 500).json({ error: err.message });
   }
+});
+
+/**
+ * Live experiment progress endpoint.
+ */
+app.get("/experiment-progress/:sessionId", (req, res) => {
+  const session = preparedSessions.get(req.params.sessionId);
+
+  if (!session) {
+    return res.status(404).json({
+      error: "Session not found",
+    });
+  }
+
+  res.json(
+    session.progress || {
+      completed: 0,
+      total: 0,
+      percentage: 0,
+    },
+  );
 });
 
 app.listen(3001, () => {

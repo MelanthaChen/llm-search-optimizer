@@ -1,4 +1,7 @@
-import { useState, useRef } from "react";
+import {
+  useState,
+  useRef,
+} from "react";
 import axios from "axios";
 
 function App() {
@@ -23,7 +26,15 @@ function App() {
   const [elapsedTime, setElapsedTime] =
     useState("0.0");
 
+  const [progress, setProgress] = useState({
+    completed: 0,
+    total: 0,
+    percentage: 0,
+  });
+
   const timerRef = useRef(null);
+
+  const progressRef = useRef(null);
 
   /**
    * Start frontend timer.
@@ -48,6 +59,11 @@ function App() {
       clearInterval(timerRef.current);
 
       timerRef.current = null;
+    }
+    if (progressRef.current) {
+      clearInterval(progressRef.current);
+
+      progressRef.current = null;
     }
   };
 
@@ -90,6 +106,20 @@ function App() {
       );
 
       const sessionId = prepared.data.sessionId;
+
+      /**
+      * Start live progress polling.
+      */
+      progressRef.current = setInterval(async () => {
+        try {
+          const progressRes = await axios.get(
+            `https://llm-search-optimizer-backend.onrender.com/experiment-progress/${sessionId}`,
+          );
+          setProgress(progressRes.data);
+        } catch (err) {
+          console.error(err);
+        }
+      }, 1000);
 
       /**
        * Step 2:
@@ -213,6 +243,35 @@ function App() {
           <b>Live Exposure Timer:</b>{" "}
           {elapsedTime}s
         </p>
+
+        <p>
+          <b>Exposure Progress:</b>{" "}
+          {progress.completed} / {progress.total}
+        </p>
+
+        <p>
+          <b>Completion:</b>{" "}
+          {progress.percentage}%
+        </p>
+
+        <div
+          style={{
+            width: "100%",
+            height: "20px",
+            background: "#ddd",
+            borderRadius: "8px",
+            overflow: "hidden",
+          }}
+        >
+          <div
+            style={{
+              width: `${progress.percentage}%`,
+              height: "100%",
+              background: "#4caf50",
+              transition: "0.3s",
+            }}
+          />
+        </div>
 
         {backendExposureSeconds && (
           <p>

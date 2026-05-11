@@ -1,5 +1,6 @@
 const { callModel } = require("./model.service");
 const { savePromotionDatabase } = require("../utils/promotionDatabase");
+const { updateExposureProgress } = require("./experiment.service");
 
 /**
  * Number of parallel simulated users.
@@ -259,6 +260,7 @@ async function runPromotionRounds({
   model,
   target,
   question,
+  sessionId,
 }) {
   const exposureConversation = [];
 
@@ -304,6 +306,12 @@ async function runPromotionRounds({
         batchStart + MAX_PARALLEL_SESSIONS,
         total,
       )}/${total}`,
+    );
+
+    updateExposureProgress(
+      sessionId,
+      Math.min(batchStart + MAX_PARALLEL_SESSIONS, total),
+      total,
     );
   }
 

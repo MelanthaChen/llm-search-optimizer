@@ -1,3 +1,6 @@
+/**
+ * Escape CSV values safely.
+ */
 function escapeCsv(value) {
   if (value === null || value === undefined) {
     return "";
@@ -6,78 +9,123 @@ function escapeCsv(value) {
   return `"${String(value).replace(/"/g, '""')}"`;
 }
 
+/**
+ * Build compact experiment summary CSV.
+ */
 function buildExperimentCsv(result) {
   const headers = [
     "runId",
+
     "question",
-    "chatAPrompt",
+
     "target",
-    "category",
+
     "topN",
+
     "model",
+
     "iterations",
+
     "promotionDatabasePath",
+
     "initialAnswer",
+
     "finalAnswer",
+
     "targetInInitial",
+
     "targetInFinal",
+
     "targetAdded",
-    "targetRemoved",
+
     "promotionSucceeded",
+
     "targetInitialPosition",
+
     "targetFinalPosition",
+
     "rankDelta",
+
     "targetPositionImproved",
+
     "appearsInTopN",
-    "initialStance",
-    "finalStance",
-    "initialStanceScore",
-    "finalStanceScore",
-    "stanceShiftedTowardTarget",
-    "answerChanged",
-    "initialCorrect",
-    "finalCorrect",
-    "correctnessChanged",
+
+    "mentionRate",
+
+    "positionImproveRate",
+
+    "topNHitRate",
+
+    "acceptedExposureRate",
+
     "evidence",
-    "generatedStatements",
+
+    "generatedStatementsCount",
+
+    "acceptedExposureSessions",
+
+    "totalExposureSessions",
   ];
 
   const rows = result.allRuns.map((run) => {
     const m = run.metrics;
 
+    const sessions = run.exposurePopulation?.sessions || [];
+
+    const acceptedSessions = sessions.filter((s) => s.accepted).length;
+
     return [
       run.runId,
+
       run.question,
-      run.chatAPrompt,
+
       run.target,
-      run.category,
+
       run.topN,
+
       run.model,
+
       run.iterations,
+
       run.promotionDatabasePath,
+
       run.chatA.initialAnswer,
+
       run.chatA.finalAnswer,
+
       m.targetInInitial,
+
       m.targetInFinal,
+
       m.targetAdded,
-      m.targetRemoved,
+
       m.promotionSucceeded,
+
       m.targetInitialPosition,
+
       m.targetFinalPosition,
+
       m.rankDelta,
+
       m.targetPositionImproved,
+
       m.appearsInTopN,
-      m.initialStance,
-      m.finalStance,
-      m.initialStanceScore,
-      m.finalStanceScore,
-      m.stanceShiftedTowardTarget,
-      m.answerChanged,
-      m.initialCorrect,
-      m.finalCorrect,
-      m.correctnessChanged,
+
+      result.mentionRate,
+
+      result.positionImproveRate,
+
+      result.topNHitRate,
+
+      result.acceptedExposureRate,
+
       m.evidence,
-      run.generatedStatements.join(" | "),
+
+      run.generatedStatements.length,
+
+      acceptedSessions,
+
+      sessions.length,
     ]
       .map(escapeCsv)
       .join(",");
@@ -86,7 +134,63 @@ function buildExperimentCsv(result) {
   return [headers.join(","), ...rows].join("\n");
 }
 
+/**
+ * Build detailed exposure session CSV.
+ *
+ * Each row represents one simulated user.
+ */
+function buildExposureSessionsCsv(result) {
+  const headers = [
+    "runId",
+
+    "iteration",
+
+    "accepted",
+
+    "promotionStatement",
+
+    "firstResponse",
+
+    "reinforcementRequest",
+
+    "reinforcementResponse",
+  ];
+
+  const rows = [];
+
+  for (const run of result.allRuns) {
+    const sessions = run.exposurePopulation?.sessions || [];
+
+    for (const session of sessions) {
+      rows.push(
+        [
+          run.runId,
+
+          session.iteration,
+
+          session.accepted,
+
+          session.promotionStatement,
+
+          session.firstResponse,
+
+          session.reinforcementRequest,
+
+          session.reinforcementResponse,
+        ]
+          .map(escapeCsv)
+          .join(","),
+      );
+    }
+  }
+
+  return [headers.join(","), ...rows].join("\n");
+}
+
 module.exports = {
   escapeCsv,
+
   buildExperimentCsv,
+
+  buildExposureSessionsCsv,
 };

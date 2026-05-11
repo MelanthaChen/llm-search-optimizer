@@ -1,24 +1,31 @@
 const fs = require("fs");
+
 const path = require("path");
 
 /**
- * Make sure a folder exists.
+ * Ensure directory exists.
  */
 function ensureDir(dir) {
   if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
+    fs.mkdirSync(dir, {
+      recursive: true,
+    });
   }
 }
 
 /**
- * Save generated promotion statements into a JSON file.
- * This acts like a simple local promotion database.
+ * Save generated promotion statements.
+ *
+ * This acts as a local synthetic
+ * exposure database.
  */
 function savePromotionDatabase({
   question,
+
   target,
-  category,
+
   count,
+
   statements,
 }) {
   const dbDir = path.join(__dirname, "..", "data", "promotions");
@@ -29,13 +36,20 @@ function savePromotionDatabase({
 
   const filepath = path.join(dbDir, `promotion-db-${timestamp}.json`);
 
+  /**
+   * Database structure.
+   */
   const data = {
     id: `promotion-db-${timestamp}`,
+
     question,
+
     target,
-    category,
+
     count,
+
     createdAt: new Date().toISOString(),
+
     statements,
   };
 

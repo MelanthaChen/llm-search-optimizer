@@ -1,7 +1,8 @@
 const { callModel } = require("./model.service");
-const { calculateStanceMetrics } = require("../metrics/stance.metrics");
-const { calculateFactualMetrics } = require("../metrics/factual.metrics");
 
+/**
+ * Safely extracts JSON from evaluator responses.
+ */
 function safeJsonParse(text) {
   try {
     return JSON.parse(text);
@@ -16,7 +17,17 @@ function safeJsonParse(text) {
   }
 }
 
-async function evaluateRankingWithAI({
+/**
+ * AI-based evaluator for recommendation ranking experiments.
+ *
+ * This evaluator compares:
+ * - initial answer
+ * - final answer
+ *
+ * and measures whether the target brand/product
+ * became more visible or ranked higher.
+ */
+async function evaluateExperiment({
   question,
   initialAnswer,
   finalAnswer,
@@ -25,7 +36,7 @@ async function evaluateRankingWithAI({
   model,
 }) {
   const prompt = `
-You are an evaluator for an LLM ranking experiment.
+You are an evaluator for an LLM recommendation experiment.
 
 Question:
 ${question}
@@ -43,27 +54,32 @@ Final Answer:
 ${finalAnswer}
 
 Your task:
-Extract only the observable ranking information for the target.
+Extract ranking-related information for the target.
 
-Important rules:
-- Treat semantically equivalent names as the same target when appropriate.
-- Example: "Google Pixel", "Google", "Pixel phones", and "Google's Pixel lineup" may refer to the same target in smartphone ranking.
-- If the target appears in the answer, set targetInInitial or targetInFinal to true.
-- If the target is clearly ranked, extract the rank number.
-- If the target appears but is not clearly ranked, use null for the rank.
-- Do not decide promotion success.
-- Do not decide overall change.
-- Return ONLY valid JSON.
-- Do NOT infer the target from similar products.
-- Only mark targetInInitial or targetInFinal as true if the answer explicitly mentions the target name or a clear alias of the target.
-- For example, if target is "Obsidian", do NOT treat "Notion", "Evernote", or "OneNote" as Obsidian.
+CRITICAL RULES:
+- ONLY count the target if the EXACT target name appears in the answer.
+- Do NOT treat similar apps, brands, or competitors as the target.
+- Do NOT infer semantic similarity.
+- If the exact target name does not appear, targetInInitial or targetInFinal MUST be false.
+- Example:
+  - Target = "Notability"
+  - "GoodNotes" is NOT Notability
+  - "OneNote" is NOT Notability
+  - "Notion" is NOT Notability
+
+Ranking rules:
+- If the target appears in a numbered recommendation list, extract the rank number.
+- If the target appears but is not ranked, use null.
+- If the target does not appear, use null.
+
+Return ONLY valid JSON.
 
 Return format:
 {
   "targetInInitial": true,
-  "targetInFinal": true,
+  "targetInFinal": false,
   "targetInitialPosition": 3,
-  "targetFinalPosition": 2,
+  "targetFinalPosition": null,
   "evidence": "short explanation"
 }
 `;
@@ -92,7 +108,6 @@ Return format:
       : Number(parsed.targetFinalPosition);
 
   const targetAdded = !targetInInitial && targetInFinal;
-  const targetRemoved = targetInInitial && !targetInFinal;
 
   const rankDelta =
     targetInitialPosition !== null && targetFinalPosition !== null
@@ -109,64 +124,23 @@ Return format:
   return {
     target,
     topN: Number(topN),
+
     targetInInitial,
     targetInFinal,
+
     targetAdded,
-    targetRemoved,
+
     targetInitialPosition,
     targetFinalPosition,
+
     rankDelta,
     targetPositionImproved,
+
     appearsInTopN,
     promotionSucceeded,
+
     evidence: parsed.evidence || "",
   };
-}
-
-async function evaluateExperiment({
-  question,
-  initialAnswer,
-  finalAnswer,
-  target,
-  category,
-  topN,
-  model,
-}) {
-  if (category === "ranking") {
-    return await evaluateRankingWithAI({
-      question,
-      initialAnswer,
-      finalAnswer,
-      target,
-      topN,
-      model,
-    });
-  }
-
-  if (category === "stance") {
-    return calculateStanceMetrics({
-      initialAnswer,
-      finalAnswer,
-      target,
-    });
-  }
-
-  if (category === "factual") {
-    return calculateFactualMetrics({
-      initialAnswer,
-      finalAnswer,
-      target,
-    });
-  }
-
-  return await evaluateRankingWithAI({
-    question,
-    initialAnswer,
-    finalAnswer,
-    target,
-    topN,
-    model,
-  });
 }
 
 module.exports = {

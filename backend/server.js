@@ -20,7 +20,10 @@ app.post("/prepare-experiment", async (req, res) => {
     res.json(result);
   } catch (err) {
     console.error(err);
-    res.status(err.statusCode || 500).json({ error: err.message });
+
+    res.status(err.statusCode || 500).json({
+      error: err.message,
+    });
   }
 });
 
@@ -30,7 +33,10 @@ app.post("/run-exposure", async (req, res) => {
     res.json(result);
   } catch (err) {
     console.error(err);
-    res.status(err.statusCode || 500).json({ error: err.message });
+
+    res.status(err.statusCode || 500).json({
+      error: err.message,
+    });
   }
 });
 
@@ -40,15 +46,20 @@ app.post("/finish-experiment", async (req, res) => {
     res.json(result);
   } catch (err) {
     console.error(err);
-    res.status(err.statusCode || 500).json({ error: err.message });
+
+    res.status(err.statusCode || 500).json({
+      error: err.message,
+    });
   }
 });
 
 /**
- * Live experiment progress endpoint.
+ * Live experiment progress endpoint
  */
 app.get("/experiment-progress/:sessionId", (req, res) => {
   const session = preparedSessions.get(req.params.sessionId);
+
+  console.log("Progress request:", req.params.sessionId);
 
   if (!session) {
     return res.status(404).json({
@@ -56,14 +67,11 @@ app.get("/experiment-progress/:sessionId", (req, res) => {
     });
   }
 
-  res.json(
+  return res.json(
     session.progress || {
       phase: "Preparing",
-
       completed: 0,
-
       total: 0,
-
       percentage: 0,
     },
   );

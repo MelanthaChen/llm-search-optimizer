@@ -119,29 +119,6 @@ function App() {
 
       const sessionId =
         prepared.data.sessionId;
-
-      /**
-       * Start realtime polling.
-       */
-      progressRef.current =
-        setInterval(async () => {
-          try {
-            const progressRes =
-              await axios.get(
-                `https://llm-search-optimizer-backend.onrender.com/experiment-progress/${sessionId}`,
-              );
-
-            console.log(
-              "LIVE PROGRESS:",
-              progressRes.data,
-            );
-
-            setProgress(progressRes.data);
-          } catch (err) {
-            console.error(err);
-          }
-        }, 1000);
-
       /**
        * Step 2:
        * Run exposure simulation.

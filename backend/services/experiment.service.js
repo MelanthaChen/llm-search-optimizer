@@ -482,7 +482,7 @@ async function finishExperiment(body) {
   /**
    * Remove completed session.
    */
-  preparedSessions.delete(sessionId);
+  // preparedSessions.delete(sessionId);
 
   return {
     ...experimentResult,

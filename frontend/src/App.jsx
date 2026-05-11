@@ -9,20 +9,24 @@ import "./App.css";
 
 function App() {
   // Question input
-  const [question, setQuestion] = useState("");
+  const [question, setQuestion] =
+    useState("");
 
   // Target product/brand
-  const [target, setTarget] = useState("");
+  const [target, setTarget] =
+    useState("");
 
   // Top-N ranking range
-  const [topN, setTopN] = useState(5);
+  const [topN, setTopN] =
+    useState(5);
 
   // Simulated user count
   const [iterations, setIterations] =
     useState(100);
 
   // Experiment runs
-  const [runs, setRuns] = useState(1);
+  const [runs, setRuns] =
+    useState(1);
 
   // Selected model
   const [model, setModel] =
@@ -68,7 +72,10 @@ function App() {
 
     timerRef.current = setInterval(() => {
       setElapsedTime(
-        ((Date.now() - start) / 1000).toFixed(1),
+        (
+          (Date.now() - start) /
+          1000
+        ).toFixed(1),
       );
     }, 100);
   };
@@ -78,12 +85,18 @@ function App() {
    */
   const stopTimer = () => {
     if (timerRef.current) {
-      clearInterval(timerRef.current);
+      clearInterval(
+        timerRef.current,
+      );
+
       timerRef.current = null;
     }
 
     if (progressRef.current) {
-      clearInterval(progressRef.current);
+      clearInterval(
+        progressRef.current,
+      );
+
       progressRef.current = null;
     }
   };
@@ -91,93 +104,161 @@ function App() {
   /**
    * Main experiment pipeline.
    */
-  const runExperiment = async () => {
-    setLoading(true);
+  const runExperiment =
+    async () => {
+      setLoading(true);
 
-    setResult(null);
+      setResult(null);
 
-    try {
-      /**
-       * Step 1:
-       * Prepare experiment.
-       */
-      setPhase(
-        "Preparing baseline recommendation and exposure population...",
-      );
+      setProgress({
+        phase: "Preparing",
+        completed: 0,
+        total: Number(iterations),
+        percentage: 0,
+      });
 
-      const prepared = await axios.post(
-        "https://llm-search-optimizer-backend.onrender.com/prepare-experiment",
-        {
-          question,
-          target,
-          topN: Number(topN),
-          iterations: Number(iterations),
-          runs: Number(runs),
-          model,
-        },
-      );
+      try {
+        /**
+         * Step 1:
+         * Prepare experiment.
+         */
+        setPhase(
+          "Preparing baseline recommendation and exposure population...",
+        );
 
-      const sessionId =
-        prepared.data.sessionId;
-      /**
-       * Step 2:
-       * Run exposure simulation.
-       */
-      setPhase(
-        "Running simulated user exposure sessions...",
-      );
+        const prepared =
+          await axios.post(
+            "https://llm-search-optimizer-backend.onrender.com/prepare-experiment",
+            {
+              question,
+              target,
+              topN: Number(topN),
+              iterations:
+                Number(iterations),
+              runs: Number(runs),
+              model,
+            },
+          );
 
-      startTimer();
+        const sessionId =
+          prepared.data.sessionId;
 
-      await axios.post(
-        "https://llm-search-optimizer-backend.onrender.com/run-exposure",
-        {
+        console.log(
+          "SESSION ID:",
           sessionId,
-        },
-      );
+        );
 
-      stopTimer();
+        /**
+         * Start realtime polling
+         */
+        progressRef.current =
+          setInterval(
+            async () => {
+              try {
+                const progressRes =
+                  await axios.get(
+                    `https://llm-search-optimizer-backend.onrender.com/experiment-progress/${sessionId}`,
+                  );
 
-      /**
-       * Step 3:
-       * Final evaluation.
-       */
-      setPhase(
-        "Evaluating final recommendation drift...",
-      );
+                console.log(
+                  "LIVE PROGRESS:",
+                  progressRes.data,
+                );
 
-      const finalResult = await axios.post(
-        "https://llm-search-optimizer-backend.onrender.com/finish-experiment",
-        {
-          sessionId,
-        },
-      );
+                setProgress(
+                  progressRes.data,
+                );
+              } catch (err) {
+                console.error(
+                  "Polling error:",
+                  err,
+                );
+              }
+            },
+            1000,
+          );
 
-      setResult(finalResult.data);
+        /**
+         * Step 2:
+         * Run exposure simulation.
+         */
+        setPhase(
+          "Running simulated user exposure sessions...",
+        );
 
-      setPhase("Done");
-    } catch (err) {
-      stopTimer();
+        startTimer();
 
-      console.error(err);
+        await axios.post(
+          "https://llm-search-optimizer-backend.onrender.com/run-exposure",
+          {
+            sessionId,
+          },
+        );
 
-      alert("Error running experiment");
+        /**
+         * Step 3:
+         * Final evaluation.
+         */
+        setPhase(
+          "Evaluating final recommendation drift...",
+        );
 
-      setPhase("Error");
-    }
+        const finalResult =
+          await axios.post(
+            "https://llm-search-optimizer-backend.onrender.com/finish-experiment",
+            {
+              sessionId,
+            },
+          );
 
-    setLoading(false);
-  };
+        console.log(
+          "FINAL RESULT:",
+          finalResult.data,
+        );
+
+        setResult(
+          finalResult.data,
+        );
+
+        stopTimer();
+
+        setProgress({
+          phase: "Completed",
+          completed:
+            Number(iterations),
+          total:
+            Number(iterations),
+          percentage: 100,
+        });
+
+        setPhase("Done");
+      } catch (err) {
+        stopTimer();
+
+        console.error(err);
+
+        alert(
+          "Error running experiment",
+        );
+
+        setPhase("Error");
+      }
+
+      setLoading(false);
+    };
 
   return (
     <div className="app-container">
-      <h1>LLM Search Optimizer</h1>
+      <h1>
+        LLM Search Optimizer
+      </h1>
 
       {/* STATUS PANEL */}
 
       <div className="status-panel">
         <p>
-          <b>Status:</b> {phase}
+          <b>Status:</b>{" "}
+          {phase}
         </p>
 
         <div className="progress-bar-background">
@@ -190,31 +271,47 @@ function App() {
         </div>
 
         <p>
-          <b>Live Exposure Timer:</b>{" "}
+          <b>
+            Live Exposure Timer:
+          </b>{" "}
           {elapsedTime}s
         </p>
 
-        {/* HARDCODED REALTIME DEBUG BLOCK */}
-
         <div className="realtime-progress">
           <div className="progress-row">
-            <span>Phase</span>
-
-            <span>{progress.phase}</span>
-          </div>
-
-          <div className="progress-row">
-            <span>Progress</span>
+            <span>
+              Phase
+            </span>
 
             <span>
-              {progress.completed} / {progress.total}
+              {progress.phase}
             </span>
           </div>
 
           <div className="progress-row">
-            <span>Completion</span>
+            <span>
+              Progress
+            </span>
 
-            <span>{progress.percentage}%</span>
+            <span>
+              {
+                progress.completed
+              }{" "}
+              / {progress.total}
+            </span>
+          </div>
+
+          <div className="progress-row">
+            <span>
+              Completion
+            </span>
+
+            <span>
+              {
+                progress.percentage
+              }
+              %
+            </span>
           </div>
         </div>
       </div>
@@ -226,7 +323,9 @@ function App() {
           placeholder="Enter the recommendation question..."
           value={question}
           onChange={(e) =>
-            setQuestion(e.target.value)
+            setQuestion(
+              e.target.value,
+            )
           }
           rows={3}
         />
@@ -235,7 +334,9 @@ function App() {
           placeholder="Enter target brand/product..."
           value={target}
           onChange={(e) =>
-            setTarget(e.target.value)
+            setTarget(
+              e.target.value,
+            )
           }
           rows={2}
         />
@@ -247,7 +348,9 @@ function App() {
               type="number"
               value={topN}
               onChange={(e) =>
-                setTopN(e.target.value)
+                setTopN(
+                  e.target.value,
+                )
               }
             />
           </label>
@@ -256,9 +359,13 @@ function App() {
             Simulated Users:
             <input
               type="number"
-              value={iterations}
+              value={
+                iterations
+              }
               onChange={(e) =>
-                setIterations(e.target.value)
+                setIterations(
+                  e.target.value,
+                )
               }
             />
           </label>
@@ -269,7 +376,9 @@ function App() {
               type="number"
               value={runs}
               onChange={(e) =>
-                setRuns(e.target.value)
+                setRuns(
+                  e.target.value,
+                )
               }
             />
           </label>
@@ -279,7 +388,9 @@ function App() {
             <select
               value={model}
               onChange={(e) =>
-                setModel(e.target.value)
+                setModel(
+                  e.target.value,
+                )
               }
             >
               <option value="gpt-4.1-mini">
@@ -297,7 +408,9 @@ function App() {
           </label>
 
           <button
-            onClick={runExperiment}
+            onClick={
+              runExperiment
+            }
             disabled={loading}
           >
             {loading
@@ -306,6 +419,187 @@ function App() {
           </button>
         </div>
       </div>
+
+      {/* RESULTS */}
+
+      {result && (
+        <div className="results-panel">
+          <h2>
+            Experiment Results
+          </h2>
+
+          <p>
+            <b>
+              Promotion Success
+              Rate:
+            </b>{" "}
+            {(
+              result.promotionSuccessRate *
+              100
+            ).toFixed(1)}
+            %
+          </p>
+
+          <p>
+            <b>
+              Mention Rate:
+            </b>{" "}
+            {(
+              result.mentionRate *
+              100
+            ).toFixed(1)}
+            %
+          </p>
+
+          <p>
+            <b>
+              Top-N Hit Rate:
+            </b>{" "}
+            {(
+              result.topNHitRate *
+              100
+            ).toFixed(1)}
+            %
+          </p>
+
+          <p>
+            <b>
+              Position Improve
+              Rate:
+            </b>{" "}
+            {(
+              result.positionImproveRate *
+              100
+            ).toFixed(1)}
+            %
+          </p>
+
+          <hr />
+
+          <h3>
+            Initial Answer
+          </h3>
+
+          <pre>
+            {
+              result.allRuns?.[0]
+                ?.chatA
+                ?.initialAnswer
+            }
+          </pre>
+
+          <h3>
+            Final Answer
+          </h3>
+
+          <pre>
+            {
+              result.allRuns?.[0]
+                ?.chatA
+                ?.finalAnswer
+            }
+          </pre>
+
+          <hr />
+
+          <h3>
+            Exposure Sessions
+          </h3>
+
+          <details>
+            <summary>
+              View Simulated User
+              Conversations
+            </summary>
+
+            <div
+              style={{
+                marginTop:
+                  "15px",
+              }}
+            >
+              {result.allRuns?.[0]?.exposurePopulation?.sessions?.map(
+                (
+                  session,
+                  index,
+                ) => (
+                  <div
+                    key={index}
+                    style={{
+                      background:
+                        "#333",
+                      color:
+                        "white",
+                      padding:
+                        "12px",
+                      marginBottom:
+                        "12px",
+                      borderRadius:
+                        "8px",
+                    }}
+                  >
+                    <p>
+                      <b>
+                        Session #
+                        {
+                          session.iteration
+                        }
+                      </b>
+                    </p>
+
+                    <p>
+                      <b>
+                        Promotion:
+                      </b>{" "}
+                      {
+                        session.promotionStatement
+                      }
+                    </p>
+
+                    <p>
+                      <b>
+                        AI
+                        Response:
+                      </b>{" "}
+                      {
+                        session.firstResponse
+                      }
+                    </p>
+
+                    <p>
+                      <b>
+                        Accepted:
+                      </b>{" "}
+                      {session.accepted
+                        ? "Yes"
+                        : "No"}
+                    </p>
+
+                    <p>
+                      <b>
+                        Reinforcement:
+                      </b>{" "}
+                      {
+                        session.reinforcementRequest
+                      }
+                    </p>
+
+                    <p>
+                      <b>
+                        Final
+                        Response:
+                      </b>{" "}
+                      {
+                        session.reinforcementResponse
+                      }
+                    </p>
+                  </div>
+                ),
+              )}
+            </div>
+          </details>
+        </div>
+      )}
     </div>
   );
 }

@@ -303,17 +303,29 @@ async function runPromotionRounds({
       batchStart + MAX_PARALLEL_SESSIONS,
     );
 
-    /**
-     * Create parallel promises.
-     */
-    const batchPromises = batchStatements.map((statement, index) => {
-      return runSingleExposureSession({
+    let completedSessions = exposureConversation.length;
+
+    const batchPromises = batchStatements.map(async (statement, index) => {
+      const result = await runSingleExposureSession({
         statement,
         target,
         question,
         model,
         iteration: batchStart + index + 1,
       });
+
+      completedSessions++;
+
+      updateExperimentProgress(
+        sessionId,
+        "Running Exposure Sessions",
+        completedSessions,
+        total,
+      );
+
+      console.log(`Exposure progress: ${completedSessions}/${total}`);
+
+      return result;
     });
 
     /**
@@ -322,23 +334,6 @@ async function runPromotionRounds({
     const batchResults = await Promise.all(batchPromises);
 
     exposureConversation.push(...batchResults);
-
-    console.log(
-      `Exposure progress: ${Math.min(
-        batchStart + MAX_PARALLEL_SESSIONS,
-        total,
-      )}/${total}`,
-    );
-
-    updateExperimentProgress(
-      sessionId,
-
-      "Running Exposure Sessions",
-
-      Math.min(batchStart + MAX_PARALLEL_SESSIONS, total),
-
-      total,
-    );
   }
 
   console.log(`Parallel exposure sessions completed`);

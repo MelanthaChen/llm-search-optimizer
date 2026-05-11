@@ -104,3 +104,21 @@ button:hover {
   margin-bottom: 0;
 }
 
+.results-panel {
+  margin-top: 30px;
+  background: #fff7e6;
+  color: #222;
+  padding: 20px;
+  border-radius: 10px;
+  border: 1px solid #f0c36d;
+}
+
+.results-panel pre {
+  background: #333;
+  color: white;
+  padding: 12px;
+  overflow-x: auto;
+  border-radius: 6px;
+  white-space: pre-wrap;
+}
+

@@ -183,7 +183,7 @@ function App() {
       }}
     >
       <h1>
-        LLM Recommendation Conditioning Simulator
+        LLM Search Optimizer 
       </h1>
 
       {/* STATUS PANEL */}

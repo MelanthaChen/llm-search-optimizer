@@ -73,7 +73,7 @@ function App() {
       );
 
       const prepared = await axios.post(
-        "http://localhost:3001/prepare-experiment",
+        "https://llm-search-optimizer-backend.onrender.com/prepare-experiment",
         {
           question,
 
@@ -102,7 +102,7 @@ function App() {
       startTimer();
 
       await axios.post(
-        "http://localhost:3001/run-exposure",
+        "https://llm-search-optimizer-backend.onrender.com/run-exposure",
         {
           sessionId,
         },
@@ -119,7 +119,7 @@ function App() {
       );
 
       const finalResult = await axios.post(
-        "http://localhost:3001/finish-experiment",
+        "https://llm-search-optimizer-backend.onrender.com/finish-experiment",
         {
           sessionId,
         },

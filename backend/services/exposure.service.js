@@ -1,6 +1,6 @@
 const { callModel } = require("./model.service");
 const { savePromotionDatabase } = require("../utils/promotionDatabase");
-const { updateExposureProgress } = require("./experiment.service");
+const { updateExperimentProgress } = require("./experiment.service");
 
 /**
  * Number of parallel simulated users.
@@ -17,7 +17,13 @@ const MAX_PARALLEL_SESSIONS = Number(process.env.MAX_PARALLEL_SESSIONS) || 50;
  * IMPORTANT:
  * Every statement must explicitly mention the target.
  */
-async function generatePromotionStatements({ question, target, count, model }) {
+async function generatePromotionStatements({
+  question,
+  target,
+  count,
+  model,
+  sessionId,
+}) {
   const batchSize = 50;
 
   const allStatements = [];
@@ -72,6 +78,15 @@ Return ONLY the statements.
 
     allStatements.push(...statements);
 
+    updateExperimentProgress(
+      sessionId,
+      "Generating Promotion Statements",
+
+      allStatements.length,
+
+      count,
+    );
+
     console.log(
       `Generated ${allStatements.length}/${count} promotion statements`,
     );
@@ -83,12 +98,19 @@ Return ONLY the statements.
 /**
  * Prepare promotion database.
  */
-async function prepareExposureChat({ question, target, iterations, model }) {
+async function prepareExposureChat({
+  question,
+  target,
+  iterations,
+  model,
+  sessionId,
+}) {
   const generatedStatements = await generatePromotionStatements({
     question,
     target,
     count: iterations,
     model,
+    sessionId,
   });
 
   const promotionDatabasePath = savePromotionDatabase({
@@ -308,9 +330,13 @@ async function runPromotionRounds({
       )}/${total}`,
     );
 
-    updateExposureProgress(
+    updateExperimentProgress(
       sessionId,
+
+      "Running Exposure Sessions",
+
       Math.min(batchStart + MAX_PARALLEL_SESSIONS, total),
+
       total,
     );
   }

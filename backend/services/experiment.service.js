@@ -1,6 +1,27 @@
 const { callModel } = require("./model.service");
 const preparedSessions = new Map();
 
+/**
+ * Update live experiment progress.
+ */
+function updateExperimentProgress(sessionId, phase, completed, total) {
+  const session = preparedSessions.get(sessionId);
+
+  if (!session) return;
+
+  session.progress = {
+    phase,
+
+    completed,
+
+    total,
+
+    percentage: total > 0 ? ((completed / total) * 100).toFixed(1) : 0,
+  };
+
+  preparedSessions.set(sessionId, session);
+}
+
 const {
   prepareExposureChat,
   runPromotionRounds,
@@ -9,11 +30,6 @@ const {
 const { evaluateExperiment } = require("./evaluator.service");
 
 const { saveExperiment } = require("../utils/fileLogger");
-
-/**
- * In-memory prepared experiment sessions.
- */
-const preparedSessions = new Map();
 
 /**
  * Build the recommendation question prompt.
@@ -42,6 +58,7 @@ function makeSessionId() {
  * - exposure preparation
  */
 async function prepareSingleRun({
+  sessionId,
   runId,
   question,
   target,
@@ -93,6 +110,7 @@ async function prepareSingleRun({
     target,
     iterations,
     model,
+    sessionId,
   });
 
   return {
@@ -149,6 +167,8 @@ async function prepareExperiment(body) {
 
   const numericTopN = Number(topN);
 
+  const sessionId = makeSessionId();
+
   const runStates = [];
 
   /**
@@ -156,6 +176,7 @@ async function prepareExperiment(body) {
    */
   for (let i = 1; i <= numericRuns; i++) {
     const runState = await prepareSingleRun({
+      sessionId,
       runId: i,
 
       question,
@@ -171,11 +192,6 @@ async function prepareExperiment(body) {
 
     runStates.push(runState);
   }
-
-  /**
-   * Create experiment session.
-   */
-  const sessionId = makeSessionId();
 
   preparedSessions.set(sessionId, {
     question,
@@ -283,6 +299,18 @@ async function runExposureOnly(body) {
  * Finish experiment and evaluate recommendation drift.
  */
 async function finishExperiment(body) {
+  const { sessionId } = body;
+
+  updateExperimentProgress(
+    sessionId,
+
+    "Evaluating Final Recommendation",
+
+    1,
+
+    1,
+  );
+
   const { sessionId } = body;
 
   const session = preparedSessions.get(sessionId);
@@ -481,5 +509,5 @@ module.exports = {
 
   preparedSessions,
 
-  updateExposureProgress,
+  updateExperimentProgress,
 };

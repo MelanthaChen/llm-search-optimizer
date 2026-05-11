@@ -58,8 +58,12 @@ app.get("/experiment-progress/:sessionId", (req, res) => {
 
   res.json(
     session.progress || {
+      phase: "Preparing",
+
       completed: 0,
+
       total: 0,
+
       percentage: 0,
     },
   );

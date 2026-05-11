@@ -2,6 +2,7 @@ import {
   useState,
   useRef,
 } from "react";
+
 import axios from "axios";
 
 function App() {
@@ -26,9 +27,13 @@ function App() {
   const [elapsedTime, setElapsedTime] =
     useState("0.0");
 
-  const [progress, setProgress] = useState({
+  const [progress, setProgress] =useState({
+    phase: "Idle",
+
     completed: 0,
+
     total: 0,
+
     percentage: 0,
   });
 
@@ -240,13 +245,14 @@ function App() {
         </p>
 
         <p>
-          <b>Live Exposure Timer:</b>{" "}
-          {elapsedTime}s
+          <b>Current Phase:</b>{" "}
+          {progress.phase}
         </p>
 
         <p>
-          <b>Exposure Progress:</b>{" "}
-          {progress.completed} / {progress.total}
+          <b>Progress:</b>{" "}
+          {progress.completed} /
+          {progress.total}
         </p>
 
         <p>
@@ -259,7 +265,7 @@ function App() {
             width: "100%",
             height: "20px",
             background: "#ddd",
-            borderRadius: "8px",
+            borderRadius: "10px",
             overflow: "hidden",
           }}
         >
@@ -272,6 +278,11 @@ function App() {
             }}
           />
         </div>
+
+        <p>
+          <b>Live Exposure Timer:</b>{" "}
+          {elapsedTime}s
+        </p>
 
         {backendExposureSeconds && (
           <p>

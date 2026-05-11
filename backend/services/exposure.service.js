@@ -1,6 +1,6 @@
 const { callModel } = require("./model.service");
 const { savePromotionDatabase } = require("../utils/promotionDatabase");
-const { updateExperimentProgress } = require("./experiment.service");
+const { updateExperimentProgress } = require("./progress.service");
 
 /**
  * Number of parallel simulated users.

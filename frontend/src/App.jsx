@@ -292,7 +292,13 @@ function App() {
         )}
 
         {progress && (
-          <div style={{ marginTop: "10px", color: "white" }}>
+          <div
+            style={{
+              marginTop: "10px",
+              color: "#222",
+              fontWeight: "bold",
+            }}
+          >
             <div>
               Progress: {progress.completed} / {progress.total}
             </div>
@@ -302,7 +308,6 @@ function App() {
             </div>
           </div>
         )}
-        
       </div>
 
       {/* INPUTS */}

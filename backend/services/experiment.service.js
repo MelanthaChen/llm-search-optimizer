@@ -1,26 +1,8 @@
 const { callModel } = require("./model.service");
-const preparedSessions = new Map();
-
-/**
- * Update live experiment progress.
- */
-function updateExperimentProgress(sessionId, phase, completed, total) {
-  const session = preparedSessions.get(sessionId);
-
-  if (!session) return;
-
-  session.progress = {
-    phase,
-
-    completed,
-
-    total,
-
-    percentage: total > 0 ? ((completed / total) * 100).toFixed(1) : 0,
-  };
-
-  preparedSessions.set(sessionId, session);
-}
+const {
+  preparedSessions,
+  updateExperimentProgress,
+} = require("./progress.service");
 
 const {
   prepareExposureChat,
@@ -315,8 +297,6 @@ async function finishExperiment(body) {
 
     1,
   );
-
-  const { sessionId } = body;
 
   const session = preparedSessions.get(sessionId);
 

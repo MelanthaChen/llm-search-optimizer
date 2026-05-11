@@ -290,6 +290,19 @@ function App() {
             {backendExposureSeconds} seconds
           </p>
         )}
+
+        {progress && (
+          <div style={{ marginTop: "10px", color: "white" }}>
+            <div>
+              Progress: {progress.completed} / {progress.total}
+            </div>
+
+            <div>
+              {progress.percentage}%
+            </div>
+          </div>
+        )}
+        
       </div>
 
       {/* INPUTS */}

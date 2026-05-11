@@ -102,17 +102,6 @@ async function prepareSingleRun({
     content: initialAnswer,
   });
 
-  /**
-   * Prepare exposure population.
-   */
-  const exposurePrepared = await prepareExposureChat({
-    question: chatAPrompt,
-    target,
-    iterations,
-    model,
-    sessionId,
-  });
-
   return {
     runId,
 
@@ -132,9 +121,9 @@ async function prepareSingleRun({
 
     initialAnswer,
 
-    generatedStatements: exposurePrepared.generatedStatements,
+    generatedStatements: [],
 
-    promotionDatabasePath: exposurePrepared.promotionDatabasePath,
+    promotionDatabasePath: null,
 
     exposureConversation: [],
   };
@@ -257,6 +246,22 @@ async function runExposureOnly(body) {
    * Run exposure population for each run.
    */
   for (const runState of session.runStates) {
+    const exposurePrepared = await prepareExposureChat({
+      question: runState.chatAPrompt,
+
+      target: runState.target,
+
+      iterations: runState.iterations,
+
+      model: runState.model,
+
+      sessionId,
+    });
+
+    runState.generatedStatements = exposurePrepared.generatedStatements;
+
+    runState.promotionDatabasePath = exposurePrepared.promotionDatabasePath;
+
     const result = await runPromotionRounds({
       generatedStatements: runState.generatedStatements,
 
@@ -492,8 +497,12 @@ function updateExposureProgress(sessionId, completed, total) {
   if (!session) return;
 
   session.progress = {
+    phase: "Generating promotions",
+
     completed,
+
     total,
+
     percentage: total > 0 ? ((completed / total) * 100).toFixed(1) : 0,
   };
 

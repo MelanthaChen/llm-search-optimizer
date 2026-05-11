@@ -178,6 +178,16 @@ async function prepareExperiment(body) {
     model,
 
     runStates,
+
+    progress: {
+      phase: "Preparing Experiment",
+
+      completed: 0,
+
+      total: numericIterations,
+
+      percentage: 0,
+    },
   });
 
   return {
@@ -228,6 +238,12 @@ async function runExposureOnly(body) {
    * Run exposure population for each run.
    */
   for (const runState of session.runStates) {
+    updateExperimentProgress(
+      sessionId,
+      "Generating Promotion Statements",
+      0,
+      runState.iterations,
+    );
     const exposurePrepared = await prepareExposureChat({
       question: runState.chatAPrompt,
 
@@ -243,6 +259,13 @@ async function runExposureOnly(body) {
     runState.generatedStatements = exposurePrepared.generatedStatements;
 
     runState.promotionDatabasePath = exposurePrepared.promotionDatabasePath;
+
+    updateExperimentProgress(
+      sessionId,
+      "Running Exposure Sessions",
+      0,
+      runState.generatedStatements.length,
+    );
 
     const result = await runPromotionRounds({
       generatedStatements: runState.generatedStatements,
@@ -466,27 +489,6 @@ async function finishExperiment(body) {
 
     savedPaths,
   };
-}
-
-/**
- * Update live exposure progress.
- */
-function updateExposureProgress(sessionId, completed, total) {
-  const session = preparedSessions.get(sessionId);
-
-  if (!session) return;
-
-  session.progress = {
-    phase: "Generating promotions",
-
-    completed,
-
-    total,
-
-    percentage: total > 0 ? ((completed / total) * 100).toFixed(1) : 0,
-  };
-
-  preparedSessions.set(sessionId, session);
 }
 
 module.exports = {

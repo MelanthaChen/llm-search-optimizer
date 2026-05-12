@@ -487,7 +487,21 @@ async function finishExperiment(body) {
   return {
     ...experimentResult,
 
-    savedPaths,
+    downloadableFiles: {
+      fullJson: savedPaths.fullJson,
+
+      summaryCsv: savedPaths.summaryCsv,
+
+      sessionsCsv: savedPaths.sessionsCsv,
+    },
+
+    savedPaths: {
+      jsonPath: savedPaths.jsonPath,
+
+      csvPath: savedPaths.csvPath,
+
+      sessionsCsvPath: savedPaths.sessionsCsvPath,
+    },
   };
 }
 

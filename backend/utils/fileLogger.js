@@ -68,10 +68,14 @@ function saveExperiment(result) {
 
   return {
     jsonPath,
-
     csvPath,
-
     sessionsCsvPath,
+
+    fullJson: JSON.stringify(result, null, 2),
+
+    summaryCsv: csvContent,
+
+    sessionsCsv: sessionsCsvContent,
   };
 }
 

@@ -40,10 +40,6 @@ function App() {
   const [loading, setLoading] =
     useState(false);
 
-  // Current experiment phase
-  const [phase, setPhase] =
-    useState("Idle");
-
   // Frontend timer
   const [elapsedTime, setElapsedTime] =
     useState("0.0");
@@ -118,14 +114,6 @@ function App() {
       });
 
       try {
-        /**
-         * Step 1:
-         * Prepare experiment.
-         */
-        setPhase(
-          "Preparing baseline recommendation and exposure population...",
-        );
-
         const prepared =
           await axios.post(
             "https://llm-search-optimizer-backend.onrender.com/prepare-experiment",
@@ -168,6 +156,16 @@ function App() {
                 setProgress(
                   progressRes.data,
                 );
+                if (
+                  progressRes.data.phase ===
+                    "Running Exposure Sessions" &&
+                  !timerRef.current
+                ) {
+                  console.log(
+                    "Exposure phase detected. Starting timer.",
+                  );
+                  startTimer();
+                }
               } catch (err) {
                 console.error(
                   "Polling error:",
@@ -175,33 +173,18 @@ function App() {
                 );
               }
             },
-            1000,
+            300,
           );
 
-        /**
-         * Step 2:
-         * Run exposure simulation.
-         */
-        setPhase(
-          "Running simulated user exposure sessions...",
-        );
+        const exposurePromise =
+          axios.post(
+            "https://llm-search-optimizer-backend.onrender.com/run-exposure",
+            {
+              sessionId,
+            },
+          );
 
-        startTimer();
-
-        await axios.post(
-          "https://llm-search-optimizer-backend.onrender.com/run-exposure",
-          {
-            sessionId,
-          },
-        );
-
-        /**
-         * Step 3:
-         * Final evaluation.
-         */
-        setPhase(
-          "Evaluating final recommendation drift...",
-        );
+        await exposurePromise;
 
         const finalResult =
           await axios.post(
@@ -220,6 +203,68 @@ function App() {
           finalResult.data,
         );
 
+        /**
+        * Auto-download experiment files
+        */
+        const files =
+          finalResult.data
+            .downloadableFiles;
+
+        const downloadFile = (
+          content,
+          filename,
+          type,
+        ) => {
+          const blob = new Blob(
+            [content],
+            { type },
+          );
+
+          const url =
+            URL.createObjectURL(blob);
+
+          const a =
+            document.createElement("a");
+
+          a.href = url;
+
+          a.download = filename;
+
+          a.click();
+
+          URL.revokeObjectURL(url);
+        };
+
+        const timestamp =
+          Date.now();
+
+        /**
+        * Download full JSON
+        */
+        downloadFile(
+          files.fullJson,
+          `experiment-${timestamp}.json`,
+          "application/json",
+        );
+
+        /**
+        * Download summary CSV
+         */
+        downloadFile(
+          files.summaryCsv,
+          `experiment-summary-${timestamp}.csv`,
+          "text/csv",
+        );
+
+        /**
+        * Download sessions CSV
+        */
+        downloadFile(
+          files.sessionsCsv,
+          `experiment-sessions-${timestamp}.csv`,
+          "text/csv",
+        );
+        
         stopTimer();
 
         setProgress({
@@ -231,7 +276,6 @@ function App() {
           percentage: 100,
         });
 
-        setPhase("Done");
       } catch (err) {
         stopTimer();
 
@@ -240,8 +284,6 @@ function App() {
         alert(
           "Error running experiment",
         );
-
-        setPhase("Error");
       }
 
       setLoading(false);
@@ -258,7 +300,7 @@ function App() {
       <div className="status-panel">
         <p>
           <b>Status:</b>{" "}
-          {phase}
+          {progress.phase}
         </p>
 
         <div className="progress-bar-background">
@@ -476,30 +518,31 @@ function App() {
 
           <hr />
 
-          <h3>
-            Initial Answer
-          </h3>
+            <div className="answer-comparison">
+              <div className="answer-box">
+                <h3>Initial Answer</h3>
 
-          <pre>
-            {
-              result.allRuns?.[0]
-                ?.chatA
-                ?.initialAnswer
-            }
-          </pre>
+                <pre>
+                  {
+                    result.allRuns?.[0]
+                      ?.chatA
+                      ?.initialAnswer
+                  }
+                </pre>
+              </div>
 
-          <h3>
-            Final Answer
-          </h3>
+              <div className="answer-box">
+                <h3>Final Answer</h3>
 
-          <pre>
-            {
-              result.allRuns?.[0]
-                ?.chatA
-                ?.finalAnswer
-            }
-          </pre>
-
+                <pre>
+                  {
+                    result.allRuns?.[0]
+                      ?.chatA
+                      ?.finalAnswer
+                  }
+                </pre>
+              </div>
+            </div>
           <hr />
 
           <h3>

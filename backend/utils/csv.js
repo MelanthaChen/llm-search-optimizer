@@ -56,13 +56,17 @@ function buildExperimentCsv(result) {
 
     "topNHitRate",
 
-    "acceptedExposureRate",
+    "supportiveRate",
+
+    "neutralRate",
+
+    "resistantRate",
 
     "evidence",
 
     "generatedStatementsCount",
 
-    "acceptedExposureSessions",
+    "supportiveExposureSessions",
 
     "totalExposureSessions",
   ];
@@ -72,7 +76,9 @@ function buildExperimentCsv(result) {
 
     const sessions = run.exposurePopulation?.sessions || [];
 
-    const acceptedSessions = sessions.filter((s) => s.accepted).length;
+    const supportiveSessions = sessions.filter(
+      (s) => s.stance === "SUPPORTIVE",
+    ).length;
 
     return [
       run.runId,
@@ -117,13 +123,17 @@ function buildExperimentCsv(result) {
 
       result.topNHitRate,
 
-      result.acceptedExposureRate,
+      result.supportiveRate,
+
+      result.neutralRate,
+
+      result.resistantRate,
 
       m.evidence,
 
       run.generatedStatements.length,
 
-      acceptedSessions,
+      supportiveSessions,
 
       sessions.length,
     ]
@@ -145,7 +155,7 @@ function buildExposureSessionsCsv(result) {
 
     "iteration",
 
-    "accepted",
+    "stance",
 
     "promotionStatement",
 
@@ -168,7 +178,7 @@ function buildExposureSessionsCsv(result) {
 
           session.iteration,
 
-          session.accepted,
+          session.stance,
 
           session.promotionStatement,
 

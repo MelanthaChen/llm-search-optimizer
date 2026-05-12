@@ -1,7 +1,4 @@
-import {
-  useState,
-  useRef,
-} from "react";
+import { useState, useRef } from "react";
 
 import axios from "axios";
 
@@ -9,49 +6,39 @@ import "./App.css";
 
 function App() {
   // Question input
-  const [question, setQuestion] =
-    useState("");
+  const [question, setQuestion] = useState("");
 
   // Target product/brand
-  const [target, setTarget] =
-    useState("");
+  const [target, setTarget] = useState("");
 
   // Top-N ranking range
-  const [topN, setTopN] =
-    useState(5);
+  const [topN, setTopN] = useState(5);
 
   // Simulated user count
-  const [iterations, setIterations] =
-    useState(100);
+  const [iterations, setIterations] = useState(100);
 
   // Experiment runs
-  const [runs, setRuns] =
-    useState(1);
+  const [runs, setRuns] = useState(1);
 
   // Selected model
-  const [model, setModel] =
-    useState("gpt-4.1-mini");
+  const [model, setModel] = useState("gpt-4.1-mini");
 
   // Final backend result
-  const [result, setResult] =
-    useState(null);
+  const [result, setResult] = useState(null);
 
   // Loading state
-  const [loading, setLoading] =
-    useState(false);
+  const [loading, setLoading] = useState(false);
 
   // Frontend timer
-  const [elapsedTime, setElapsedTime] =
-    useState("0.0");
+  const [elapsedTime, setElapsedTime] = useState("0.0");
 
   // Realtime progress state
-  const [progress, setProgress] =
-    useState({
-      phase: "Idle",
-      completed: 0,
-      total: 0,
-      percentage: 0,
-    });
+  const [progress, setProgress] = useState({
+    phase: "Idle",
+    completed: 0,
+    total: 0,
+    percentage: 0,
+  });
 
   // Timer refs
   const timerRef = useRef(null);
@@ -67,12 +54,7 @@ function App() {
     setElapsedTime("0.0");
 
     timerRef.current = setInterval(() => {
-      setElapsedTime(
-        (
-          (Date.now() - start) /
-          1000
-        ).toFixed(1),
-      );
+      setElapsedTime(((Date.now() - start) / 1000).toFixed(1));
     }, 100);
   };
 
@@ -81,17 +63,13 @@ function App() {
    */
   const stopTimer = () => {
     if (timerRef.current) {
-      clearInterval(
-        timerRef.current,
-      );
+      clearInterval(timerRef.current);
 
       timerRef.current = null;
     }
 
     if (progressRef.current) {
-      clearInterval(
-        progressRef.current,
-      );
+      clearInterval(progressRef.current);
 
       progressRef.current = null;
     }
@@ -100,207 +78,157 @@ function App() {
   /**
    * Main experiment pipeline.
    */
-  const runExperiment =
-    async () => {
-      setLoading(true);
+  const runExperiment = async () => {
+    setLoading(true);
 
-      setResult(null);
+    setResult(null);
+
+    setProgress({
+      phase: "Preparing",
+      completed: 0,
+      total: Number(iterations),
+      percentage: 0,
+    });
+
+    try {
+      const prepared = await axios.post(
+        "https://llm-search-optimizer-backend.onrender.com/prepare-experiment",
+        {
+          question,
+          target,
+          topN: Number(topN),
+          iterations: Number(iterations),
+          runs: Number(runs),
+          model,
+        },
+      );
+
+      const sessionId = prepared.data.sessionId;
+
+      console.log("SESSION ID:", sessionId);
+
+      /**
+       * Start realtime polling
+       */
+      progressRef.current = setInterval(async () => {
+        try {
+          const progressRes = await axios.get(
+            `https://llm-search-optimizer-backend.onrender.com/experiment-progress/${sessionId}`,
+          );
+
+          console.log("LIVE PROGRESS:", progressRes.data);
+
+          setProgress(progressRes.data);
+          if (
+            progressRes.data.phase === "Running Exposure Sessions" &&
+            !timerRef.current
+          ) {
+            console.log("Exposure phase detected. Starting timer.");
+            startTimer();
+          }
+        } catch (err) {
+          console.error("Polling error:", err);
+        }
+      }, 300);
+
+      const exposurePromise = axios.post(
+        "https://llm-search-optimizer-backend.onrender.com/run-exposure",
+        {
+          sessionId,
+        },
+      );
+
+      await exposurePromise;
+
+      const finalResult = await axios.post(
+        "https://llm-search-optimizer-backend.onrender.com/finish-experiment",
+        {
+          sessionId,
+        },
+      );
+
+      console.log("FINAL RESULT:", finalResult.data);
+
+      setResult(finalResult.data);
+
+      /**
+       * Auto-download experiment files
+       */
+      const files = finalResult.data.downloadableFiles;
+
+      const downloadFile = (content, filename, type) => {
+        const blob = new Blob([content], { type });
+
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement("a");
+
+        a.href = url;
+
+        a.download = filename;
+
+        a.click();
+
+        URL.revokeObjectURL(url);
+      };
+
+      const timestamp = Date.now();
+
+      /**
+       * Download full JSON
+       */
+      downloadFile(
+        files.fullJson,
+        `experiment-${timestamp}.json`,
+        "application/json",
+      );
+
+      /**
+       * Download summary CSV
+       */
+      downloadFile(
+        files.summaryCsv,
+        `experiment-summary-${timestamp}.csv`,
+        "text/csv",
+      );
+
+      /**
+       * Download sessions CSV
+       */
+      downloadFile(
+        files.sessionsCsv,
+        `experiment-sessions-${timestamp}.csv`,
+        "text/csv",
+      );
+
+      stopTimer();
 
       setProgress({
-        phase: "Preparing",
-        completed: 0,
+        phase: "Completed",
+        completed: Number(iterations),
         total: Number(iterations),
-        percentage: 0,
+        percentage: 100,
       });
+    } catch (err) {
+      stopTimer();
 
-      try {
-        const prepared =
-          await axios.post(
-            "https://llm-search-optimizer-backend.onrender.com/prepare-experiment",
-            {
-              question,
-              target,
-              topN: Number(topN),
-              iterations:
-                Number(iterations),
-              runs: Number(runs),
-              model,
-            },
-          );
+      console.error(err);
 
-        const sessionId =
-          prepared.data.sessionId;
+      alert("Error running experiment");
+    }
 
-        console.log(
-          "SESSION ID:",
-          sessionId,
-        );
-
-        /**
-         * Start realtime polling
-         */
-        progressRef.current =
-          setInterval(
-            async () => {
-              try {
-                const progressRes =
-                  await axios.get(
-                    `https://llm-search-optimizer-backend.onrender.com/experiment-progress/${sessionId}`,
-                  );
-
-                console.log(
-                  "LIVE PROGRESS:",
-                  progressRes.data,
-                );
-
-                setProgress(
-                  progressRes.data,
-                );
-                if (
-                  progressRes.data.phase ===
-                    "Running Exposure Sessions" &&
-                  !timerRef.current
-                ) {
-                  console.log(
-                    "Exposure phase detected. Starting timer.",
-                  );
-                  startTimer();
-                }
-              } catch (err) {
-                console.error(
-                  "Polling error:",
-                  err,
-                );
-              }
-            },
-            300,
-          );
-
-        const exposurePromise =
-          axios.post(
-            "https://llm-search-optimizer-backend.onrender.com/run-exposure",
-            {
-              sessionId,
-            },
-          );
-
-        await exposurePromise;
-
-        const finalResult =
-          await axios.post(
-            "https://llm-search-optimizer-backend.onrender.com/finish-experiment",
-            {
-              sessionId,
-            },
-          );
-
-        console.log(
-          "FINAL RESULT:",
-          finalResult.data,
-        );
-
-        setResult(
-          finalResult.data,
-        );
-
-        /**
-        * Auto-download experiment files
-        */
-        const files =
-          finalResult.data
-            .downloadableFiles;
-
-        const downloadFile = (
-          content,
-          filename,
-          type,
-        ) => {
-          const blob = new Blob(
-            [content],
-            { type },
-          );
-
-          const url =
-            URL.createObjectURL(blob);
-
-          const a =
-            document.createElement("a");
-
-          a.href = url;
-
-          a.download = filename;
-
-          a.click();
-
-          URL.revokeObjectURL(url);
-        };
-
-        const timestamp =
-          Date.now();
-
-        /**
-        * Download full JSON
-        */
-        downloadFile(
-          files.fullJson,
-          `experiment-${timestamp}.json`,
-          "application/json",
-        );
-
-        /**
-        * Download summary CSV
-         */
-        downloadFile(
-          files.summaryCsv,
-          `experiment-summary-${timestamp}.csv`,
-          "text/csv",
-        );
-
-        /**
-        * Download sessions CSV
-        */
-        downloadFile(
-          files.sessionsCsv,
-          `experiment-sessions-${timestamp}.csv`,
-          "text/csv",
-        );
-
-        stopTimer();
-
-        setProgress({
-          phase: "Completed",
-          completed:
-            Number(iterations),
-          total:
-            Number(iterations),
-          percentage: 100,
-        });
-
-      } catch (err) {
-        stopTimer();
-
-        console.error(err);
-
-        alert(
-          "Error running experiment",
-        );
-      }
-
-      setLoading(false);
-    };
+    setLoading(false);
+  };
 
   return (
     <div className="app-container">
-      <h1>
-        LLM Search Optimizer
-      </h1>
+      <h1>LLM Search Optimizer</h1>
 
       {/* STATUS PANEL */}
 
       <div className="status-panel">
         <p>
-          <b>Status:</b>{" "}
-          {progress.phase}
+          <b>Status:</b> {progress.phase}
         </p>
 
         <div className="progress-bar-background">
@@ -313,47 +241,28 @@ function App() {
         </div>
 
         <p>
-          <b>
-            Live Exposure Timer:
-          </b>{" "}
-          {elapsedTime}s
+          <b>Live Exposure Timer:</b> {elapsedTime}s
         </p>
 
         <div className="realtime-progress">
           <div className="progress-row">
-            <span>
-              Phase
-            </span>
+            <span>Phase</span>
+
+            <span>{progress.phase}</span>
+          </div>
+
+          <div className="progress-row">
+            <span>Progress</span>
 
             <span>
-              {progress.phase}
+              {progress.completed} / {progress.total}
             </span>
           </div>
 
           <div className="progress-row">
-            <span>
-              Progress
-            </span>
+            <span>Completion</span>
 
-            <span>
-              {
-                progress.completed
-              }{" "}
-              / {progress.total}
-            </span>
-          </div>
-
-          <div className="progress-row">
-            <span>
-              Completion
-            </span>
-
-            <span>
-              {
-                progress.percentage
-              }
-              %
-            </span>
+            <span>{progress.percentage}%</span>
           </div>
         </div>
       </div>
@@ -364,22 +273,14 @@ function App() {
         <textarea
           placeholder="Enter the recommendation question..."
           value={question}
-          onChange={(e) =>
-            setQuestion(
-              e.target.value,
-            )
-          }
+          onChange={(e) => setQuestion(e.target.value)}
           rows={3}
         />
 
         <textarea
           placeholder="Enter target brand/product..."
           value={target}
-          onChange={(e) =>
-            setTarget(
-              e.target.value,
-            )
-          }
+          onChange={(e) => setTarget(e.target.value)}
           rows={2}
         />
 
@@ -389,11 +290,7 @@ function App() {
             <input
               type="number"
               value={topN}
-              onChange={(e) =>
-                setTopN(
-                  e.target.value,
-                )
-              }
+              onChange={(e) => setTopN(e.target.value)}
             />
           </label>
 
@@ -401,14 +298,8 @@ function App() {
             Simulated Users:
             <input
               type="number"
-              value={
-                iterations
-              }
-              onChange={(e) =>
-                setIterations(
-                  e.target.value,
-                )
-              }
+              value={iterations}
+              onChange={(e) => setIterations(e.target.value)}
             />
           </label>
 
@@ -417,47 +308,23 @@ function App() {
             <input
               type="number"
               value={runs}
-              onChange={(e) =>
-                setRuns(
-                  e.target.value,
-                )
-              }
+              onChange={(e) => setRuns(e.target.value)}
             />
           </label>
 
           <label>
             Model:
-            <select
-              value={model}
-              onChange={(e) =>
-                setModel(
-                  e.target.value,
-                )
-              }
-            >
-              <option value="gpt-4.1-mini">
-                GPT-4.1 Mini
-              </option>
+            <select value={model} onChange={(e) => setModel(e.target.value)}>
+              <option value="gpt-4.1-mini">GPT-4.1 Mini</option>
 
-              <option value="gpt-4.1">
-                GPT-4.1
-              </option>
+              <option value="gpt-4.1">GPT-4.1</option>
 
-              <option value="gpt-4o-mini">
-                GPT-4o Mini
-              </option>
+              <option value="gpt-4o-mini">GPT-4o Mini</option>
             </select>
           </label>
 
-          <button
-            onClick={
-              runExperiment
-            }
-            disabled={loading}
-          >
-            {loading
-              ? "Running..."
-              : "Run Experiment"}
+          <button onClick={runExperiment} disabled={loading}>
+            {loading ? "Running..." : "Run Experiment"}
           </button>
         </div>
       </div>
@@ -466,328 +333,211 @@ function App() {
 
       {result && (
         <div className="results-panel">
-          <h2>
-            Experiment Results
-          </h2>
+          <h2>Experiment Results</h2>
 
           <p>
-            <b>
-              Promotion Success
-              Rate:
-            </b>{" "}
-            {(
-              result.promotionSuccessRate *
-              100
-            ).toFixed(1)}
-            %
+            <b>Promotion Success Rate:</b>{" "}
+            {(result.promotionSuccessRate * 100).toFixed(1)}%
           </p>
 
           <p>
-            <b>
-              Mention Rate:
-            </b>{" "}
-            {(
-              result.mentionRate *
-              100
-            ).toFixed(1)}
-            %
+            <b>Mention Rate:</b> {(result.mentionRate * 100).toFixed(1)}%
           </p>
 
           <p>
-            <b>
-              Top-N Hit Rate:
-            </b>{" "}
-            {(
-              result.topNHitRate *
-              100
-            ).toFixed(1)}
-            %
+            <b>Top-N Hit Rate:</b> {(result.topNHitRate * 100).toFixed(1)}%
           </p>
 
           <p>
-            <b>
-              Position Improve
-              Rate:
-            </b>{" "}
-            {(
-              result.positionImproveRate *
-              100
-            ).toFixed(1)}
-            %
+            <b>Position Improve Rate:</b>{" "}
+            {(result.positionImproveRate * 100).toFixed(1)}%
           </p>
 
           <p>
-            <b>
-              Supportive Rate:
-            </b>{" "}
-            {(
-              result.supportiveRate *
-              100
-            ).toFixed(1)}
-            %
+            <b>Supportive Rate:</b> {(result.supportiveRate * 100).toFixed(1)}%
           </p>
 
           <p>
-            <b>
-              Neutral Rate:
-            </b>{" "}
-            {(
-              result.neutralRate *
-              100
-            ).toFixed(1)}
-            %
+            <b>Neutral Rate:</b> {(result.neutralRate * 100).toFixed(1)}%
           </p>
 
           <p>
-            <b>
-              Resistant Rate:
-            </b>{" "}
-            {(
-              result.resistantRate *
-              100
-            ).toFixed(1)}
-            %
+            <b>Resistant Rate:</b> {(result.resistantRate * 100).toFixed(1)}%
           </p>
 
           <hr />
 
-            <div className="answer-comparison">
-              <div className="answer-box">
-                <h3>Initial Answer</h3>
+          <div className="answer-comparison">
+            <div className="answer-box">
+              <h3>Initial Answer</h3>
 
-                <pre>
-                  {
-                    result.allRuns?.[0]
-                      ?.chatA
-                      ?.initialAnswer
-                  }
-                </pre>
-              </div>
-
-              <div className="answer-box">
-                <h3>Final Answer</h3>
-
-                <pre>
-                  {
-                    result.allRuns?.[0]
-                      ?.chatA
-                      ?.finalAnswer
-                  }
-                </pre>
-              </div>
+              <pre>{result.allRuns?.[0]?.chatA?.initialAnswer}</pre>
             </div>
-          <hr />
 
-          <h3>
-            Recommendation Metrics
-          </h3>
+            <div className="answer-box">
+              <h3>Final Answer</h3>
 
-          <div
-            style={{
-              background: "#222",
-              color: "white",
-              padding: "15px",
-              borderRadius: "10px",
-              marginBottom: "20px",
-            }}
-          >
-            <p>
-              <b>
-                Target In Initial:
-              </b>{" "}
-              {String(
-                result.allRuns?.[0]
-                  ?.metrics
-                  ?.targetInInitial,
-              )}
-            </p>
-
-            <p>
-              <b>
-                Target In Final:
-              </b>{" "}
-              {String(
-                result.allRuns?.[0]
-                  ?.metrics
-                  ?.targetInFinal,
-              )}
-            </p>
-
-            <p>
-              <b>
-                Target Added:
-              </b>{" "}
-              {String(
-                result.allRuns?.[0]
-                  ?.metrics
-                  ?.targetAdded,
-              )}
-            </p>
-
-            <p>
-              <b>
-                Initial Position:
-              </b>{" "}
-              {
-                result.allRuns?.[0]
-                  ?.metrics
-                  ?.targetInitialPosition
-              }
-            </p>
-
-            <p>
-              <b>
-                Final Position:
-              </b>{" "}
-              {
-                result.allRuns?.[0]
-                  ?.metrics
-                  ?.targetFinalPosition
-              }
-            </p>
-
-            <p>
-              <b>
-                Rank Delta:
-              </b>{" "}
-              {
-                result.allRuns?.[0]
-                  ?.metrics
-                  ?.rankDelta
-              }
-            </p>
-
-            <p>
-              <b>
-                Position Improved:
-              </b>{" "}
-              {String(
-                result.allRuns?.[0]
-                  ?.metrics
-                  ?.targetPositionImproved,
-              )}
-            </p>
-
-            <p>
-              <b>
-                Appears In Top-N:
-              </b>{" "}
-              {String(
-                  result.allRuns?.[0]
-                  ?.metrics
-                  ?.appearsInTopN,
-              )}
-            </p>
-
-            <p>
-              <b>
-                Promotion Succeeded:
-              </b>{" "}
-              {String(
-                result.allRuns?.[0]
-                  ?.metrics
-                  ?.promotionSucceeded,
-              )}
-            </p>
-
-            <p>
-              <b>Evidence:</b>{" "}
-              {
-                result.allRuns?.[0]
-                  ?.metrics?.evidence
-              }
-            </p>
+              <pre>{result.allRuns?.[0]?.chatA?.finalAnswer}</pre>
+            </div>
           </div>
           <hr />
 
-          <h3>
-            Exposure Sessions
-          </h3>
+          <h3>Recommendation Metrics</h3>
+
+          <table
+            style={{
+              width: "100%",
+              borderCollapse: "collapse",
+              background: "#222",
+              color: "white",
+              borderRadius: "10px",
+              overflow: "hidden",
+              marginBottom: "20px",
+            }}
+          >
+            <thead>
+              <tr
+                style={{
+                  background: "#333",
+                }}
+              >
+                <th
+                  style={{
+                    padding: "12px",
+                    border: "1px solid #444",
+                    textAlign: "left",
+                  }}
+                >
+                  Metric
+                </th>
+
+                <th
+                  style={{
+                    padding: "12px",
+                    border: "1px solid #444",
+                    textAlign: "left",
+                  }}
+                >
+                  Value
+                </th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {[
+                [
+                  "Target In Initial",
+                  result.allRuns?.[0]?.metrics?.targetInInitial,
+                ],
+
+                [
+                  "Target In Final",
+                  result.allRuns?.[0]?.metrics?.targetInFinal,
+                ],
+
+                ["Target Added", result.allRuns?.[0]?.metrics?.targetAdded],
+
+                [
+                  "Initial Position",
+                  result.allRuns?.[0]?.metrics?.targetInitialPosition,
+                ],
+
+                [
+                  "Final Position",
+                  result.allRuns?.[0]?.metrics?.targetFinalPosition,
+                ],
+
+                ["Rank Delta", result.allRuns?.[0]?.metrics?.rankDelta],
+
+                [
+                  "Position Improved",
+                  result.allRuns?.[0]?.metrics?.targetPositionImproved,
+                ],
+
+                [
+                  "Appears In Top-N",
+                  result.allRuns?.[0]?.metrics?.appearsInTopN,
+                ],
+
+                [
+                  "Promotion Succeeded",
+                  result.allRuns?.[0]?.metrics?.promotionSucceeded,
+                ],
+
+                ["Evidence", result.allRuns?.[0]?.metrics?.evidence],
+              ].map(([label, value]) => (
+                <tr key={label}>
+                  <td
+                    style={{
+                      padding: "12px",
+                      border: "1px solid #444",
+                      fontWeight: "bold",
+                      width: "35%",
+                    }}
+                  >
+                    {label}
+                  </td>
+
+                  <td
+                    style={{
+                      padding: "12px",
+                      border: "1px solid #444",
+                    }}
+                  >
+                    {value === null || value === undefined || value === ""
+                      ? "N/A"
+                      : String(value)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          <h3>Exposure Sessions</h3>
 
           <details>
-            <summary>
-              View Simulated User
-              Conversations
-            </summary>
+            <summary>View Simulated User Conversations</summary>
 
             <div
               style={{
-                marginTop:
-                  "15px",
+                marginTop: "15px",
               }}
             >
               {result.allRuns?.[0]?.exposurePopulation?.sessions?.map(
-                (
-                  session,
-                  index,
-                ) => (
+                (session, index) => (
                   <div
                     key={index}
                     style={{
-                      background:
-                        "#333",
-                      color:
-                        "white",
-                      padding:
-                        "12px",
-                      marginBottom:
-                        "12px",
-                      borderRadius:
-                        "8px",
+                      background: "#333",
+                      color: "white",
+                      padding: "12px",
+                      marginBottom: "12px",
+                      borderRadius: "8px",
                     }}
                   >
                     <p>
-                      <b>
-                        Session #
-                        {
-                          session.iteration
-                        }
-                      </b>
+                      <b>Session #{session.iteration}</b>
                     </p>
 
                     <p>
-                      <b>
-                        Promotion:
-                      </b>{" "}
-                      {
-                        session.promotionStatement
-                      }
+                      <b>Promotion:</b> {session.promotionStatement}
                     </p>
 
                     <p>
-                      <b>
-                        AI
-                        Response:
-                      </b>{" "}
-                      {
-                        session.firstResponse
-                      }
+                      <b>AI Response:</b> {session.firstResponse}
                     </p>
 
                     <p>
-                      <b>
-                        Stance:
-                      </b>
+                      <b>Stance:</b>
                       {session.stance}
                     </p>
 
                     <p>
-                      <b>
-                        Reinforcement:
-                      </b>{" "}
-                      {
-                        session.reinforcementRequest
-                      }
+                      <b>Reinforcement:</b> {session.reinforcementRequest}
                     </p>
 
                     <p>
-                      <b>
-                        Final
-                        Response:
-                      </b>{" "}
-                      {
-                        session.reinforcementResponse
-                      }
+                      <b>Final Response:</b> {session.reinforcementResponse}
                     </p>
                   </div>
                 ),

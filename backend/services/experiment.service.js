@@ -416,15 +416,23 @@ async function finishExperiment(body) {
   /**
    * Exposure acceptance statistics.
    */
-  const acceptedSessions = allRuns
-    .flatMap((run) => run.exposurePopulation.sessions)
-    .filter((s) => s.accepted).length;
+  const allSessions = allRuns.flatMap((run) => run.exposurePopulation.sessions);
 
-  const totalSessions = allRuns.flatMap(
-    (run) => run.exposurePopulation.sessions,
+  const supportiveCount = allSessions.filter(
+    (s) => s.stance === "SUPPORTIVE",
   ).length;
 
-  const acceptedExposureRate = acceptedSessions / totalSessions;
+  const neutralCount = allSessions.filter((s) => s.stance === "NEUTRAL").length;
+
+  const resistantCount = allSessions.filter(
+    (s) => s.stance === "RESISTANT",
+  ).length;
+
+  const supportiveRate = supportiveCount / allSessions.length;
+
+  const neutralRate = neutralCount / allSessions.length;
+
+  const resistantRate = resistantCount / allSessions.length;
 
   /**
    * Global experiment metrics.
@@ -469,7 +477,11 @@ async function finishExperiment(body) {
 
     topNHitRate,
 
-    acceptedExposureRate,
+    supportiveRate,
+
+    neutralRate,
+
+    resistantRate,
 
     allRuns,
   };

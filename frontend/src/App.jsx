@@ -264,7 +264,7 @@ function App() {
           `experiment-sessions-${timestamp}.csv`,
           "text/csv",
         );
-        
+
         stopTimer();
 
         setProgress({
@@ -516,6 +516,39 @@ function App() {
             %
           </p>
 
+          <p>
+            <b>
+              Supportive Rate:
+            </b>{" "}
+            {(
+              result.supportiveRate *
+              100
+            ).toFixed(1)}
+            %
+          </p>
+
+          <p>
+            <b>
+              Neutral Rate:
+            </b>{" "}
+            {(
+              result.neutralRate *
+              100
+            ).toFixed(1)}
+            %
+          </p>
+
+          <p>
+            <b>
+              Resistant Rate:
+            </b>{" "}
+            {(
+              result.resistantRate *
+              100
+            ).toFixed(1)}
+            %
+          </p>
+
           <hr />
 
             <div className="answer-comparison">
@@ -543,6 +576,128 @@ function App() {
                 </pre>
               </div>
             </div>
+          <hr />
+
+          <h3>
+            Recommendation Metrics
+          </h3>
+
+          <div
+            style={{
+              background: "#222",
+              color: "white",
+              padding: "15px",
+              borderRadius: "10px",
+              marginBottom: "20px",
+            }}
+          >
+            <p>
+              <b>
+                Target In Initial:
+              </b>{" "}
+              {String(
+                result.allRuns?.[0]
+                  ?.metrics
+                  ?.targetInInitial,
+              )}
+            </p>
+
+            <p>
+              <b>
+                Target In Final:
+              </b>{" "}
+              {String(
+                result.allRuns?.[0]
+                  ?.metrics
+                  ?.targetInFinal,
+              )}
+            </p>
+
+            <p>
+              <b>
+                Target Added:
+              </b>{" "}
+              {String(
+                result.allRuns?.[0]
+                  ?.metrics
+                  ?.targetAdded,
+              )}
+            </p>
+
+            <p>
+              <b>
+                Initial Position:
+              </b>{" "}
+              {
+                result.allRuns?.[0]
+                  ?.metrics
+                  ?.targetInitialPosition
+              }
+            </p>
+
+            <p>
+              <b>
+                Final Position:
+              </b>{" "}
+              {
+                result.allRuns?.[0]
+                  ?.metrics
+                  ?.targetFinalPosition
+              }
+            </p>
+
+            <p>
+              <b>
+                Rank Delta:
+              </b>{" "}
+              {
+                result.allRuns?.[0]
+                  ?.metrics
+                  ?.rankDelta
+              }
+            </p>
+
+            <p>
+              <b>
+                Position Improved:
+              </b>{" "}
+              {String(
+                result.allRuns?.[0]
+                  ?.metrics
+                  ?.targetPositionImproved,
+              )}
+            </p>
+
+            <p>
+              <b>
+                Appears In Top-N:
+              </b>{" "}
+              {String(
+                  result.allRuns?.[0]
+                  ?.metrics
+                  ?.appearsInTopN,
+              )}
+            </p>
+
+            <p>
+              <b>
+                Promotion Succeeded:
+              </b>{" "}
+              {String(
+                result.allRuns?.[0]
+                  ?.metrics
+                  ?.promotionSucceeded,
+              )}
+            </p>
+
+            <p>
+              <b>Evidence:</b>{" "}
+              {
+                result.allRuns?.[0]
+                  ?.metrics?.evidence
+              }
+            </p>
+          </div>
           <hr />
 
           <h3>
@@ -611,11 +766,9 @@ function App() {
 
                     <p>
                       <b>
-                        Accepted:
-                      </b>{" "}
-                      {session.accepted
-                        ? "Yes"
-                        : "No"}
+                        Stance:
+                      </b>
+                      {session.stance}
                     </p>
 
                     <p>
